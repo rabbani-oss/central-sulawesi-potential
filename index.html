@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Central Sulawesi Potential</title>
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      crossorigin=""
+    />
+    <style>
+      #map { height: 100vh; }
+      .legend {
+        background: white;
+        padding: 6px 8px;
+        font: 14px Arial, Helvetica, sans-serif;
+        box-shadow: 0 0 15px rgba(0,0,0,0.2);
+        border-radius: 5px;
+        line-height: 24px;
+        color: #555;
+      }
+      .legend i {
+        width: 18px;
+        height: 18px;
+        float: left;
+        margin-right: 8px;
+        opacity: 0.7;
+      }
+    </style>
+</head>
+<body>
+<div id="map"></div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+
+  // Inisialisasi peta Sulawesi
+  const map = L.map('map').setView([-2.5, 121.5], 5);
+
+  // ======================
+  // BASEMAP OPTIONS
+  // ======================
+
+  const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap contributors',
+      maxZoom: 19
+  });
+
+  const cartoLight = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+      attribution: '&copy; OpenStreetMap &copy; CARTO',
+      subdomains: 'abcd',
+      maxZoom: 19
+  });
+
+  const esriImagery = L.tileLayer(
+      'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+      attribution: 'Tiles © Esri',
+      maxZoom: 19
+  });
+
+  // Default basemap
+  osm.addTo(map);
+
+  // ======================
+  // STYLE OVERLAY
+  // ======================
+
+  const styleIUP = { color: 'red', weight: 1, fillOpacity: 0.2 };
+  const styleLaterit = { color: 'orange', weight: 2, fillOpacity: 0.3 };
+
+  const overlays = {};
+
+  function loadGeoJSON(url, style, layerName) {
+    fetch(url)
+      .then(res => res.json())
+      .then(data => {
+        const layer = L.geoJSON(data, {
+          style: style,
+          onEachFeature: (feature, layer) => {
+            if (feature.properties) {
+              let popupContent = `<b>${layerName}</b><br>`;
+              for (const key in feature.properties) {
+                popupContent += `<b>${key}</b>: ${feature.properties[key]}<br>`;
+              }
+              layer.bindPopup(popupContent);
+            }
+          }
+        }).addTo(map);
+
+        overlays[layerName] = layer;
+
+        const bounds = layer.getBounds();
+        if (bounds.isValid()) map.fitBounds(bounds);
+      });
+  }
+
+  loadGeoJSON('IUP.geojson', styleIUP, 'IUP');
+  loadGeoJSON('laterit.geojson', styleLaterit, 'Laterit');
+
+  // ======================
+  // LAYER CONTROL
+  // ======================
+
+  const baseMaps = {
+    "OSM Standard": osm,
+    "Carto Light": cartoLight,
+    "ESRI World Imagery": esriImagery
+  };
+
+  L.control.layers(baseMaps, overlays).addTo(map);
+
+  // ======================
+  // LEGEND
+  // ======================
+
+  const legend = L.control({position: 'bottomleft'});
+  legend.onAdd = function () {
+      const div = L.DomUtil.create('div', 'legend');
+      div.innerHTML += '<i style="background: red"></i>IUP<br>';
+      div.innerHTML += '<i style="background: orange"></i>Laterit<br>';
+      return div;
+  };
+  legend.addTo(map);
+
+</script>
+</body>
+</html>
